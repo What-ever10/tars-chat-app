@@ -1,5 +1,6 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { query } from "./_generated/server";
 
 export const createUser = mutation({
   args: {
@@ -28,5 +29,41 @@ export const createUser = mutation({
       name: args.name,
       imageUrl: args.imageUrl,
     });
+  },
+});
+
+export const getUsers = query({
+  args: {
+    search: v.optional(v.string()),
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) =>
+        q.eq("clerkId", args.clerkId)
+      )
+      .unique();
+
+    if (!currentUser) {
+      return [];
+    }
+
+    let users = await ctx.db.query("users").collect();
+
+    // Exclude current user
+    users = users.filter(
+      (user) => user._id !== currentUser._id
+    );
+
+    // Apply search if provided
+    if (args.search && args.search.trim() !== "") {
+      const searchLower = args.search.toLowerCase();
+      users = users.filter((user) =>
+        user.name.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return users;
   },
 });
