@@ -81,3 +81,9 @@ export const getCurrentUser = query({
       .unique();
   },
 });
+
+export const getAllUsers = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("users").collect();
+  },
+});

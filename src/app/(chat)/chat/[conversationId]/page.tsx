@@ -13,7 +13,6 @@ export default function ConversationPage() {
   const { user } = useUser();
   const params = useParams();
   const conversationId = params.conversationId as Id<"conversations">;
-  
   const [message, setMessage] = useState("");
 
   const messages = useQuery(api.messages.getMessages, {
@@ -24,7 +23,10 @@ export default function ConversationPage() {
   user ? { clerkId: user.id } : "skip"
   );
 
+  const presence = useQuery(api.presence.getPresence);
+  const allUsers = useQuery(api.users.getAllUsers);
   const sendMessage = useMutation(api.messages.sendMessage);
+  const setTyping = useMutation(api.presence.setTyping);
 
   if (!messages || !currentUser) {
   return (
@@ -38,6 +40,29 @@ export default function ConversationPage() {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 flex justify-center">
         <div className="w-full max-w-2xl flex flex-col gap-4">
+          {presence?.map((p) => {
+            const isTyping =
+              p.typingConversationId?.toString() ===
+                conversationId.toString() &&
+              p.isTyping &&
+              p.userId.toString() !==
+                currentUser._id.toString();
+
+            if (!isTyping) return null;
+
+            const typingUser = allUsers?.find(
+              (u) => u._id.toString() === p.userId.toString()
+            );
+
+            return (
+              <div
+                key={p._id}
+                className="text-sm text-gray-500 italic"
+              >
+                {typingUser?.name ?? "Someone"} is typing...
+              </div>
+            );
+          })}
           {messages.length === 0 && (
             <div className="flex flex-1 items-center justify-center text-gray-500">
               <p className="text-sm">
@@ -89,7 +114,17 @@ export default function ConversationPage() {
           <input
             className="flex-1 rounded-md border px-3 py-2 text-sm"
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+
+              if (!user) return;
+
+              setTyping({
+                clerkId: user.id,
+                conversationId,
+                isTyping: e.target.value.length > 0,
+              });
+            }}
             placeholder="Type a message..."
           />
           <button
@@ -102,7 +137,11 @@ export default function ConversationPage() {
                 clerkId: user.id,
                 content: message,
               });
-
+              await setTyping({
+                clerkId: user.id,
+                conversationId,
+                isTyping: false,
+              });
               setMessage("");
             }}
           >

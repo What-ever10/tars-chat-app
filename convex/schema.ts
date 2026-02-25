@@ -36,6 +36,7 @@ export default defineSchema({
     userId: v.id("users"),
     isOnline: v.boolean(),
     lastSeen: v.number(),
-  })
-    .index("by_user", ["userId"]),
+    isTyping: v.optional(v.boolean()),
+    typingConversationId: v.optional(v.id("conversations")),
+  }).index("by_user", ["userId"]),
 });

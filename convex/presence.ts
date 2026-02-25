@@ -67,6 +67,38 @@ export const setOffline = mutation({
   },
 });
 
+export const setTyping = mutation({
+  args: {
+    clerkId: v.string(),
+    conversationId: v.id("conversations"),
+    isTyping: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) =>
+        q.eq("clerkId", args.clerkId)
+      )
+      .unique();
+
+    if (!user) return;
+
+    const existing = await ctx.db
+      .query("presence")
+      .withIndex("by_user", (q) =>
+        q.eq("userId", user._id)
+      )
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        isTyping: args.isTyping,
+        typingConversationId: args.conversationId,
+      });
+    }
+  },
+});
+
 export const getPresence = query({
   handler: async (ctx) => {
     return await ctx.db.query("presence").collect();
