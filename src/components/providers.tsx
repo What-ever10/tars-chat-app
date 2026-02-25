@@ -12,6 +12,8 @@ const convex = new ConvexReactClient(
 function SyncUser() {
   const { user } = useUser();
   const createUser = useMutation(api.users.createUser);
+  const setOnline = useMutation(api.presence.setOnline);
+  const setOffline = useMutation(api.presence.setOffline);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -22,6 +24,19 @@ function SyncUser() {
       name: user.fullName ?? "Unknown",
       imageUrl: user.imageUrl,
     });
+
+    setOnline({ clerkId: user.id });
+
+    const handleUnload = () => {
+      setOffline({ clerkId: user.id });
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+
+    return () => {
+      handleUnload();
+      window.removeEventListener("beforeunload", handleUnload);
+    };
   }, [user?.id]);
 
   return null;
