@@ -38,7 +38,7 @@ export function ConversationList() {
   return (
     <div className="flex flex-col gap-2">
       {conversations.map((conv) => {
-        // 🔥 Heartbeat-based online detection
+        // online detection
         const userPresence = presence?.find(
           (p) =>
             p.userId.toString() ===

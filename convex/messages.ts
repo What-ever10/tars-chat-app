@@ -68,7 +68,7 @@ export const deleteMessage = mutation({
     if (message.deleted) return;
 
     await ctx.db.patch(args.messageId, {
-      deleted: true, // ✅ ONLY this
+      deleted: true, 
     });
   },
 });

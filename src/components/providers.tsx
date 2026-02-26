@@ -35,7 +35,6 @@ function SyncUser() {
     return () => {
       clearInterval(interval);
 
-      // Update lastSeen one final time
       setOnline({ clerkId: user.id });
         };
       }, [user?.id]);

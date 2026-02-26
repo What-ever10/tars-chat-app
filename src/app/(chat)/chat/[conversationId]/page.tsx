@@ -116,7 +116,7 @@ export default function ConversationPage() {
     };
   }, [conversationId, messages.length]);
 
-  /* ================= MARK AS READ ONLY IF AT BOTTOM ================= */
+  /* ================= MARKING AS READ ONLY IF AT BOTTOM ================= */
 
   useEffect(() => {
     if (
@@ -151,7 +151,7 @@ export default function ConversationPage() {
     const container = containerRef.current;
     if (!container || !rawMessages) return;
 
-    // Only scroll once per conversation load
+    // initial scroll once per conversation load
     if (!hasScrolledRef.current) {
       container.scrollTop = container.scrollHeight;
       setIsAtBottom(true);
