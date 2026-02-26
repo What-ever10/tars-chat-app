@@ -19,9 +19,10 @@ export default defineSchema({
   conversationMembers: defineTable({
     conversationId: v.id("conversations"),
     userId: v.id("users"),
+    lastReadAt: v.optional(v.number()),
   })
-    .index("by_conversation", ["conversationId"])
-    .index("by_user", ["userId"]),
+  .index("by_user", ["userId"])
+  .index("by_conversation", ["conversationId"]),
 
   messages: defineTable({
     conversationId: v.id("conversations"),
@@ -34,7 +35,6 @@ export default defineSchema({
 
   presence: defineTable({
     userId: v.id("users"),
-    isOnline: v.boolean(),
     lastSeen: v.number(),
     isTyping: v.optional(v.boolean()),
     typingConversationId: v.optional(v.id("conversations")),

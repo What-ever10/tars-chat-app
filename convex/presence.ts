@@ -24,13 +24,11 @@ export const setOnline = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        isOnline: true,
         lastSeen: Date.now(),
       });
     } else {
       await ctx.db.insert("presence", {
         userId: user._id,
-        isOnline: true,
         lastSeen: Date.now(),
       });
     }
@@ -60,7 +58,6 @@ export const setOffline = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        isOnline: false,
         lastSeen: Date.now(),
       });
     }

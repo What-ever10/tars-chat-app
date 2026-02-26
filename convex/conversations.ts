@@ -121,13 +121,59 @@ export const getUserConversations = query({
         .order("desc")
         .first();
 
+        //get unread count
+        let unreadCount = 0;
+        if (lastMessage && membership.lastReadAt) {
+          unreadCount =
+            lastMessage._creationTime > membership.lastReadAt
+              ? 1
+              : 0;
+        }
+
+        if (lastMessage && !membership.lastReadAt) {
+          unreadCount = 1;
+        }
       conversations.push({
         conversationId: conversation._id,
         otherUser,
         lastMessage,
+        unreadCount,
       });
     }
 
     return conversations;
+  },
+});
+
+export const markAsRead = mutation({
+  args: {
+    clerkId: v.string(),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) =>
+        q.eq("clerkId", args.clerkId)
+      )
+      .unique();
+
+    if (!user) return;
+
+    const membership = await ctx.db
+      .query("conversationMembers")
+      .withIndex("by_user", (q) =>
+        q.eq("userId", user._id)
+      )
+      .filter((q) =>
+        q.eq(q.field("conversationId"), args.conversationId)
+      )
+      .unique();
+
+    if (!membership) return;
+
+    await ctx.db.patch(membership._id, {
+      lastReadAt: Date.now(),
+    });
   },
 });

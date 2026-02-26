@@ -3,43 +3,146 @@
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { formatMessageTime } from "@/lib/date";
+import { formatMessageTime, formatLastSeen } from "@/lib/date";
 import { Id } from "../../../../../convex/_generated/dataModel";
-
+import { useRouter } from "next/navigation";
 
 export default function ConversationPage() {
   const { user } = useUser();
   const params = useParams();
-  const conversationId = params.conversationId as Id<"conversations">;
+  const conversationId =
+    params.conversationId as Id<"conversations">;
+
   const [message, setMessage] = useState("");
 
   const messages = useQuery(api.messages.getMessages, {
     conversationId,
   });
+
   const currentUser = useQuery(
-  api.users.getCurrentUser,
-  user ? { clerkId: user.id } : "skip"
+    api.users.getCurrentUser,
+    user ? { clerkId: user.id } : "skip"
   );
 
   const presence = useQuery(api.presence.getPresence);
   const allUsers = useQuery(api.users.getAllUsers);
+
   const sendMessage = useMutation(api.messages.sendMessage);
   const setTyping = useMutation(api.presence.setTyping);
 
-  if (!messages || !currentUser) {
-  return (
-    <div className="flex h-full items-center justify-center text-gray-400">
-      Loading conversation...
-    </div>
+  const conversations = useQuery(
+    api.conversations.getUserConversations,
+    user ? { clerkId: user.id } : "skip"
   );
-}
- return (
+
+  const currentConversation = conversations?.find(
+    (c) =>
+      c.conversationId.toString() ===
+      conversationId.toString()
+  );
+
+  const otherUser = currentConversation?.otherUser;
+  const router = useRouter();
+  const markAsRead = useMutation(api.conversations.markAsRead);
+  useEffect(() => {
+    if (!user?.id) return;
+
+    markAsRead({
+      clerkId: user.id,
+      conversationId,
+    });
+  }, [conversationId, user?.id]);
+  if (!messages || !currentUser) {
+    return (
+      <div className="flex h-full items-center justify-center text-gray-400">
+        Loading conversation...
+      </div>
+    );
+  }
+
+
+  return (
     <div className="flex h-full w-full flex-col">
-      {/* Messages Area */}
+      {/* ================= HEADER ================= */}
+      <div className="border-b p-4 flex items-center gap-3">
+        {/* Mobile Back Button */}
+        <button
+          onClick={() => router.push("/")}
+          className="md:hidden text-gray-600 mr-2"
+        >
+          ←
+        </button>
+        <div className="relative">
+          <img
+            src={otherUser?.imageUrl}
+            alt={otherUser?.name}
+            className="h-10 w-10 rounded-full"
+          />
+          {presence?.map((p) => {
+            if (
+              p.userId.toString() !==
+              otherUser?._id.toString()
+            )
+              return null;
+
+            const isOnline =
+              Date.now() - p.lastSeen < 15000;
+
+            if (!isOnline) return null;
+
+            return (
+              <span
+                key={p._id}
+                className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"
+              />
+            );
+          })}
+        </div>
+
+        <div className="flex flex-col">
+          <span className="font-medium">
+            {otherUser?.name}
+          </span>
+
+          {presence?.map((p) => {
+            if (
+              p.userId.toString() !==
+              otherUser?._id.toString()
+            )
+              return null;
+
+            const isOnline =
+              Date.now() - p.lastSeen < 15000;
+
+            if (isOnline) {
+              return (
+                <span
+                  key={p._id}
+                  className="text-xs text-green-600"
+                >
+                  Online
+                </span>
+              );
+            }
+
+            return (
+              <span
+                key={p._id}
+                className="text-xs text-gray-500"
+              >
+                {formatLastSeen(p.lastSeen)}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ================= MESSAGES ================= */}
       <div className="flex-1 overflow-y-auto p-6 flex justify-center">
         <div className="w-full max-w-2xl flex flex-col gap-4">
+          {/* Typing Indicator */}
           {presence?.map((p) => {
             const isTyping =
               p.typingConversationId?.toString() ===
@@ -51,7 +154,9 @@ export default function ConversationPage() {
             if (!isTyping) return null;
 
             const typingUser = allUsers?.find(
-              (u) => u._id.toString() === p.userId.toString()
+              (u) =>
+                u._id.toString() ===
+                p.userId.toString()
             );
 
             return (
@@ -59,10 +164,12 @@ export default function ConversationPage() {
                 key={p._id}
                 className="text-sm text-gray-500 italic"
               >
-                {typingUser?.name ?? "Someone"} is typing...
+                {typingUser?.name ?? "Someone"} is
+                typing...
               </div>
             );
           })}
+
           {messages.length === 0 && (
             <div className="flex flex-1 items-center justify-center text-gray-500">
               <p className="text-sm">
@@ -70,6 +177,7 @@ export default function ConversationPage() {
               </p>
             </div>
           )}
+
           {messages.map((msg) => {
             const isMe =
               msg.senderId.toString() ===
@@ -79,7 +187,9 @@ export default function ConversationPage() {
               <div
                 key={msg._id}
                 className={`flex ${
-                  isMe ? "justify-end" : "justify-start"
+                  isMe
+                    ? "justify-end"
+                    : "justify-start"
                 }`}
               >
                 <div
@@ -98,7 +208,9 @@ export default function ConversationPage() {
                           : "text-gray-500"
                       }`}
                     >
-                      {formatMessageTime(msg._creationTime)}
+                      {formatMessageTime(
+                        msg._creationTime
+                      )}
                     </span>
                   </div>
                 </div>
@@ -108,7 +220,7 @@ export default function ConversationPage() {
         </div>
       </div>
 
-      {/* Input Area */}
+      {/* ================= INPUT ================= */}
       <div className="border-t p-4 flex justify-center">
         <div className="w-full max-w-2xl flex gap-2">
           <input
@@ -122,26 +234,31 @@ export default function ConversationPage() {
               setTyping({
                 clerkId: user.id,
                 conversationId,
-                isTyping: e.target.value.length > 0,
+                isTyping:
+                  e.target.value.length > 0,
               });
             }}
             placeholder="Type a message..."
           />
+
           <button
             className="rounded-md bg-black text-white px-4"
             onClick={async () => {
-              if (!message.trim() || !user) return;
+              if (!message.trim() || !user)
+                return;
 
               await sendMessage({
                 conversationId,
                 clerkId: user.id,
                 content: message,
               });
+
               await setTyping({
                 clerkId: user.id,
                 conversationId,
                 isTyping: false,
               });
+
               setMessage("");
             }}
           >

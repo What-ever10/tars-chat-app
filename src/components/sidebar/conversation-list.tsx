@@ -38,12 +38,16 @@ export function ConversationList() {
   return (
     <div className="flex flex-col gap-2">
       {conversations.map((conv) => {
-        const isOnline = presence?.find(
+        // 🔥 Heartbeat-based online detection
+        const userPresence = presence?.find(
           (p) =>
             p.userId.toString() ===
-              conv.otherUser?._id.toString() &&
-            p.isOnline
+            conv.otherUser?._id.toString()
         );
+
+        const isOnline =
+          userPresence &&
+          Date.now() - userPresence.lastSeen < 15000;
 
         return (
           <div
@@ -51,7 +55,7 @@ export function ConversationList() {
             onClick={() =>
               router.push(`/chat/${conv.conversationId}`)
             }
-            className="flex gap-3 p-3 rounded-lg hover:bg-gray-100 cursor-pointer"
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 cursor-pointer"
           >
             {/* Avatar + Online Indicator */}
             <div className="relative">
@@ -60,14 +64,15 @@ export function ConversationList() {
                 alt={conv.otherUser?.name}
                 className="h-10 w-10 rounded-full"
               />
+
               {isOnline && (
                 <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white" />
               )}
             </div>
 
-            {/* Name + Last Message */}
-            <div className="flex flex-col flex-1">
-              <span className="font-medium text-sm">
+            {/* Name + Preview */}
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="font-medium text-sm truncate">
                 {conv.otherUser?.name}
               </span>
 
@@ -76,14 +81,22 @@ export function ConversationList() {
               </span>
             </div>
 
-            {/* Timestamp */}
-            {conv.lastMessage && (
-              <span className="text-xs text-gray-400">
-                {formatMessageTime(
-                  conv.lastMessage._creationTime
-                )}
-              </span>
-            )}
+            {/* Right Side (Timestamp + Unread Badge) */}
+            <div className="flex flex-col items-end gap-1">
+              {conv.lastMessage && (
+                <span className="text-xs text-gray-400">
+                  {formatMessageTime(
+                    conv.lastMessage._creationTime
+                  )}
+                </span>
+              )}
+
+              {conv.unreadCount > 0 && (
+                <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  {conv.unreadCount}
+                </span>
+              )}
+            </div>
           </div>
         );
       })}

@@ -1,9 +1,10 @@
 "use client";
 
 import { ClerkProvider, useUser } from "@clerk/nextjs";
-import { ConvexProvider, ConvexReactClient, useMutation } from "convex/react";
-import { useEffect } from "react";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ReactNode, useEffect } from "react";
 import { api } from "../../convex/_generated/api";
+import { useMutation } from "convex/react";
 
 const convex = new ConvexReactClient(
   process.env.NEXT_PUBLIC_CONVEX_URL!
@@ -11,13 +12,14 @@ const convex = new ConvexReactClient(
 
 function SyncUser() {
   const { user } = useUser();
+
   const createUser = useMutation(api.users.createUser);
   const setOnline = useMutation(api.presence.setOnline);
-  const setOffline = useMutation(api.presence.setOffline);
 
   useEffect(() => {
     if (!user?.id) return;
 
+    // Ensure user exists in DB
     createUser({
       clerkId: user.id,
       email: user.primaryEmailAddress?.emailAddress ?? "",
@@ -25,28 +27,22 @@ function SyncUser() {
       imageUrl: user.imageUrl,
     });
 
+    // Initial online mark
     setOnline({ clerkId: user.id });
 
-    const handleUnload = () => {
-      setOffline({ clerkId: user.id });
-    };
-
-    window.addEventListener("beforeunload", handleUnload);
+    const interval = setInterval(() => {
+      setOnline({ clerkId: user.id });
+    }, 10000);
 
     return () => {
-      handleUnload();
-      window.removeEventListener("beforeunload", handleUnload);
+      clearInterval(interval);
     };
   }, [user?.id]);
 
   return null;
 }
 
-export function Providers({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function Providers({ children }: { children: ReactNode }) {
   return (
     <ClerkProvider>
       <ConvexProvider client={convex}>

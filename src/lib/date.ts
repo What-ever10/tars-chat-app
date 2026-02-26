@@ -30,3 +30,39 @@ export function formatMessageTime(timestamp: number): string {
 
   return new Intl.DateTimeFormat("en-US", options).format(date);
 }
+
+export function formatLastSeen(timestamp: number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+
+  const isToday =
+    date.toDateString() === now.toDateString();
+
+  const isSameYear =
+    date.getFullYear() === now.getFullYear();
+
+  const timeFormatter = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  if (isToday) {
+    return `Last seen today at ${timeFormatter.format(date)}`;
+  }
+
+  const options: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  };
+
+  if (!isSameYear) {
+    options.year = "numeric";
+  }
+
+  return `Last seen ${new Intl.DateTimeFormat(
+    "en-US",
+    options
+  ).format(date)}`;
+}
