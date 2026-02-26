@@ -19,7 +19,6 @@ function SyncUser() {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Ensure user exists in DB
     createUser({
       clerkId: user.id,
       email: user.primaryEmailAddress?.emailAddress ?? "",
@@ -27,7 +26,6 @@ function SyncUser() {
       imageUrl: user.imageUrl,
     });
 
-    // Initial online mark
     setOnline({ clerkId: user.id });
 
     const interval = setInterval(() => {
@@ -36,8 +34,11 @@ function SyncUser() {
 
     return () => {
       clearInterval(interval);
-    };
-  }, [user?.id]);
+
+      // Update lastSeen one final time
+      setOnline({ clerkId: user.id });
+        };
+      }, [user?.id]);
 
   return null;
 }

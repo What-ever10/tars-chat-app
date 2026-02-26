@@ -28,7 +28,7 @@ export default defineSchema({
     conversationId: v.id("conversations"),
     senderId: v.id("users"),
     content: v.string(),
-    deleted: v.boolean(),
+    deleted: v.optional(v.boolean()),
   })
     .index("by_conversation", ["conversationId"])
     .index("by_sender", ["senderId"]),

@@ -37,7 +37,38 @@ export const sendMessage = mutation({
       conversationId: args.conversationId,
       senderId: user._id,
       content: args.content,
-      deleted: false,
+    });
+  },
+});
+
+export const deleteMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) =>
+        q.eq("clerkId", args.clerkId)
+      )
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const message = await ctx.db.get(args.messageId);
+
+    if (!message)
+      throw new Error("Message not found");
+
+    if (message.senderId !== user._id) {
+      throw new Error("Not authorized");
+    }
+
+    if (message.deleted) return;
+
+    await ctx.db.patch(args.messageId, {
+      deleted: true, // ✅ ONLY this
     });
   },
 });

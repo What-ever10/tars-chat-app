@@ -123,17 +123,30 @@ export const getUserConversations = query({
 
         //get unread count
         let unreadCount = 0;
-        if (lastMessage && membership.lastReadAt) {
-          unreadCount =
-            lastMessage._creationTime > membership.lastReadAt
-              ? 1
-              : 0;
-        }
+        const allMessages = await ctx.db
+          .query("messages")
+          .withIndex("by_conversation", (q) =>
+            q.eq("conversationId", conversation._id)
+          )
+          .collect();
 
-        if (lastMessage && !membership.lastReadAt) {
-          unreadCount = 1;
-        }
-      conversations.push({
+        unreadCount = allMessages.filter((msg) => {
+          // Ignore messages sent by current user
+          if (
+            msg.senderId.toString() ===
+            currentUser._id.toString()
+          ) {
+            return false;
+          }
+
+          // If never read before
+          if (!membership.lastReadAt) {
+            return true;
+          }
+
+          return msg._creationTime > membership.lastReadAt;
+        }).length;
+        conversations.push({
         conversationId: conversation._id,
         otherUser,
         lastMessage,
